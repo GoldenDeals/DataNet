@@ -28,3 +28,6 @@ DataNet
 
 *.db
 *.store
+
+test.yaml
+test2.yaml

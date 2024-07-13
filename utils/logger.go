@@ -6,21 +6,23 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var (
+type LogFactory struct {
 	loggerFlush      map[string]func() error
-	loggerInitalized = false
-)
-
-func InitLoggers() {
-	loggerFlush = make(map[string]func() error)
-	loggerInitalized = true
+	loggerInitalized bool
 }
 
-func NewLogger(sys string) *zap.SugaredLogger {
-	if !loggerInitalized {
+func InitLoggers() *LogFactory {
+	l := new(LogFactory)
+	l.loggerFlush = make(map[string]func() error)
+	l.loggerInitalized = true
+	return l
+}
+
+func (l *LogFactory) NewLogger(sys string) *zap.SugaredLogger {
+	if !l.loggerInitalized {
 		panic("logger is not initialized")
 	}
-	_, ok := loggerFlush[sys]
+	_, ok := l.loggerFlush[sys]
 	if ok {
 		panic("logger sys exiting")
 	}
@@ -35,7 +37,6 @@ func NewLogger(sys string) *zap.SugaredLogger {
 			EncodeLevel: zapcore.LowercaseColorLevelEncoder,
 			EncodeTime:  zapcore.EpochTimeEncoder,
 		},
-		InitialFields:    map[string]interface{}{"sys": sys},
 		OutputPaths:      viper.GetStringSlice("log.out"),
 		ErrorOutputPaths: viper.GetStringSlice("log.erros"),
 	}
@@ -47,15 +48,15 @@ func NewLogger(sys string) *zap.SugaredLogger {
 
 	logger = logger.Named(sys)
 
-	loggerFlush[sys] = logger.Sync
+	l.loggerFlush[sys] = logger.Sync
 
 	sugar := logger.Sugar()
 	return sugar
 }
 
-func SyncLoggers() {
-	for _, f := range loggerFlush {
-		f()
+func (l *LogFactory) SyncLoggers() {
+	for _, f := range l.loggerFlush {
+		_ = f()
 	}
 }
 

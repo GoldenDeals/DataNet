@@ -5,30 +5,28 @@ import (
 	"os/signal"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 
+	"github.com/GoldenDeals/DataNet/network"
 	"github.com/GoldenDeals/DataNet/utils"
 )
 
-var lg *zap.SugaredLogger
-
 func main() {
 	utils.Configure()
-	utils.InitLoggers()
+	lf := utils.InitLoggers()
 
-	lg = utils.NewLogger("main")
+	lg := lf.NewLogger("main")
 	lg.Infof("Starting DataNet Node (%s)", viper.GetString("version"))
 
-	lg.Error("Errors")
-	lg.Warn("Warn")
+	_, err := network.SetupNode(lf.NewLogger("net"))
+	if err != nil {
+		lg.Fatalw("Error while starting node", "err", err)
+	}
 
+	//nolint:mnd  // Т.к. не надо это число выностить в константу
 	exit := make(chan os.Signal, 2)
 	signal.Notify(exit, os.Interrupt)
 	<-exit
-	ShutdownApp()
-}
 
-func ShutdownApp() {
-
-	utils.SyncLoggers()
+	lg.Warn("Got sinal. Shutting down")
+	lf.SyncLoggers()
 }
