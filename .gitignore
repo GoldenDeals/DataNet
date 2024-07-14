@@ -23,11 +23,10 @@ go.work.sum
 
 logs/
 *.log
-config.yaml
+
+configs/
+
 DataNet
 
 *.db
 *.store
-
-test.yaml
-test2.yaml

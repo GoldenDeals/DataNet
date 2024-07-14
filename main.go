@@ -3,30 +3,30 @@ package main
 import (
 	"os"
 	"os/signal"
-
-	"github.com/spf13/viper"
+	"syscall"
 
 	"github.com/GoldenDeals/DataNet/network"
 	"github.com/GoldenDeals/DataNet/utils"
+	"github.com/rs/zerolog/log"
 )
+
+var lg utils.LoggerGroup
 
 func main() {
 	utils.Configure()
-	lf := utils.InitLoggers()
 
-	lg := lf.NewLogger("main")
-	lg.Infof("Starting DataNet Node (%s)", viper.GetString("version"))
+	utils.InitLogger()
+	lg = utils.NewLoggerGroup("main")
 
-	_, err := network.SetupNode(lf.NewLogger("net"))
+	lg(log.Info()).Msg("Starting")
+	node, err := (&network.Node{}).Init()
 	if err != nil {
-		lg.Fatalw("Error while starting node", "err", err)
+		lg(log.Fatal()).Err(err).Msg("Error Starting node")
 	}
 
-	//nolint:mnd  // Т.к. не надо это число выностить в константу
-	exit := make(chan os.Signal, 2)
-	signal.Notify(exit, os.Interrupt)
-	<-exit
-
-	lg.Warn("Got sinal. Shutting down")
-	lf.SyncLoggers()
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
+	lg(log.Warn()).Msg("Got signal. Shutting down")
+	node.Shutdown()
 }
